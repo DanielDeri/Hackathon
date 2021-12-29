@@ -9,7 +9,7 @@ from scapy.arch import get_if_addr
 os.system("")
 
 
-# Group of Different functions for different styles
+# Style to make our output fun to read.
 class style:
     BLACK = '\033[30m'
     RED = '\033[31m'
@@ -22,7 +22,7 @@ class style:
     UNDERLINE = '\033[4m'
     RESET = '\033[0m'
 
-
+# Global vars.
 udpIp = '<broadcast>'
 udpPort = 13117
 tcpPort = 2004
@@ -30,7 +30,8 @@ counter = 0
 connect1 = None
 connect2 = None
 
-def startBordcast():
+# Start brodcasting searching for clients
+def startBroadcast():
     global counter
     ip = '192.168.56.1'
     udpSocket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM, socket.IPPROTO_UDP)
@@ -43,6 +44,7 @@ def startBordcast():
             udpSocket.sendto(struct.pack('IBH', 0xabcddcba, 0x2, tcpPort), (udpIp, udpPort))
             time.sleep(1)
 
+# Start connecting clients until 2 connected.
 def connectClients():
     global connect1, connect2, counter
     tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -65,6 +67,8 @@ def connectClients():
         else:
             time.sleep(10)
             break
+
+# Running the actual game after 2 players connected.          
 def handleGame():
     global connect1,connect2,counter
     try:
@@ -77,11 +81,13 @@ def handleGame():
         connect1.sendall('failed to get team name'.encode())
     num1 = randint(0, 9)
     num2 = randint(0, 9-num1)
+    # Let's start the game!!!
     mathQuestion = "Welcome to Quick Maths.\nPlayer 1: " + team1 + "\nPlayer 2: " + team2 + "\n====\n Please answer the following question as fast as you can:\n" + "How much is: " + str(num1) +"+" + str(num2) +"?\n"
     connect1.sendall(mathQuestion.encode())
     connect2.sendall(mathQuestion.encode())
     gotAnswer = False
     endOfTime = time.time() + 10
+    # Trying to find a winner for 10sec 
     while time.time() < endOfTime and gotAnswer == False:
         try:
             answer = connect1.recv(1024)
@@ -104,10 +110,10 @@ def handleGame():
                         num1+num2) + "!\nCongratulations to the winner:" + team1
             except:
                 time.sleep(0.1)
+    # Announcing the winner                
     connect1.sendall(endMessage.encode())
     connect2.sendall(endMessage.encode())
-
-
+    # Game Over.
 
 
 
@@ -116,7 +122,8 @@ def handleGame():
 def main():
     global counter,connect1,connect2
     while True:
-        broadcast = Thread(target=startBordcast(), args=())
+        # Starting the threads.
+        broadcast = Thread(target=startBroadcast(), args=())
         clients = Thread(target=connectClients(), args=())
         broadcast.start()
         clients.start()
