@@ -27,8 +27,8 @@ udpIp = '<broadcast>'
 udpPort = 13117
 tcpPort = 2004
 counter = 0
-connect1 = None
-connect2 = None
+endGame=False
+
 
 # Start brodcasting searching for clients
 def startBroadcast():
@@ -46,7 +46,7 @@ def startBroadcast():
 
 # Start connecting clients until 2 connected.
 def connectClients():
-    global connect1, connect2, counter
+    global counter
     tcpSocket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
     tcpSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     tcpSocket.bind(('', tcpPort))
@@ -66,53 +66,54 @@ def connectClients():
 
         else:
             time.sleep(10)
-            break
+            handleGame(connect1, connect2)
 
 # Running the actual game after 2 players connected.          
-def handleGame():
-    global connect1,connect2,counter
-    try:
-        team1 = connect1.recv(1024).decode()
-    except Exception as e:
-        connect1.sendall('failed to get team name'.encode())
-    try:
-        team2 = connect2.recv(1024).decode()
-    except Exception as e:
-        connect1.sendall('failed to get team name'.encode())
+def handleGame(conn1, conn2):
+    global counter, endGame
+    team1 = conn1.recv(1024).decode()
+    team2 = conn2.recv(1024).decode()
     num1 = randint(0, 9)
     num2 = randint(0, 9-num1)
     # Let's start the game!!!
     mathQuestion = "Welcome to Quick Maths.\nPlayer 1: " + team1 + "\nPlayer 2: " + team2 + "\n====\n Please answer the following question as fast as you can:\n" + "How much is: " + str(num1) +"+" + str(num2) +"?\n"
-    connect1.sendall(mathQuestion.encode())
-    connect2.sendall(mathQuestion.encode())
+    conn1.sendall(mathQuestion.encode())
+    conn2.sendall(mathQuestion.encode())
     gotAnswer = False
     endOfTime = time.time() + 10
     # Trying to find a winner for 10sec 
-    while time.time() < endOfTime and gotAnswer == False:
+    while time.time() < endOfTime and gotAnswer is False:
         try:
-            answer = connect1.recv(1024)
-            if int(answer) == num1+num2:
+            answer1 = conn1.recv(1024)
+            if int(answer1) == num1+num2:
                 endMessage = "Game over!\nThe correct answer was " + str(
-                    num1+num2) + "!\nCongratulations to the winner:" + team1
+                    num1+num2) + "!\nCongratulations to the winner1:" + team1
+                gotAnswer = True
             else:
                 endMessage = "Game over!\nThe correct answer was " + str(
-                    num1+num2) + "!\nCongratulations to the winner:" + team2
-            gotAnswer = True
+                    num1+num2) + "!\nCongratulations to the winner2:" + team2
+                gotAnswer = True
         except:
             try:
-                answer = connect2.recv(1024)
-                if int(answer) == num1+num2:
+                answer2 = conn2.recv(1024)
+                if int(answer2) == num1+num2:
                     endMessage = "Game over!\nThe correct answer was " + str(
-                        num1+num2) + "!\nCongratulations to the winner:" + team2
-                else:
+                        num1+num2) + "!\nCongratulations to the winner3:" + team2
                     gotAnswer = True
+                else:
                     endMessage = "Game over!\nThe correct answer was " + str(
-                        num1+num2) + "!\nCongratulations to the winner:" + team1
+                        num1+num2) + "!\nCongratulations to the winner4:" + team1
+                    gotAnswer = True
             except:
-                time.sleep(0.1)
-    # Announcing the winner                
-    connect1.sendall(endMessage.encode())
-    connect2.sendall(endMessage.encode())
+                pass
+
+
+    # Announcing the winner
+    conn1.sendall(endMessage.encode())
+    conn2.sendall(endMessage.encode())
+    conn1.close()
+    conn2.close()
+    endGame = True
     # Game Over.
 
 
@@ -120,22 +121,20 @@ def handleGame():
 
 
 def main():
-    global counter,connect1,connect2
-    while True:
+    global counter,endGame
+    while endGame==False:
         # Starting the threads.
-        broadcast = Thread(target=startBroadcast(), args=())
-        clients = Thread(target=connectClients(), args=())
+        broadcast = Thread(target=startBroadcast, args=())
+        broadcast.setDaemon(True)
         broadcast.start()
+        clients = Thread(target=connectClients, args=())
+        clients.setDaemon(True)
         clients.start()
-        handleGame()
-
+        broadcast.join()
+        clients.join()
         counter = 0
-        try:
-            connect1.close()
-            connect2.close()
-        except:
-            pass
         print("Game over, sending out offer requests...")
+
 
 if __name__ == "__main__":
     main()

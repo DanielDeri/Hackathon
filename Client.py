@@ -55,7 +55,7 @@ def main():
                 print(style.CYAN + tcpSocket.recv(1024).decode())
                 tcpSocket.close()
                 print(style.RED + "Server disconnected, listening for offer requests...")
-            except:
+        except:
                 pass
 
 if __name__ == '__main__':
